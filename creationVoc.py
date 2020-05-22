@@ -24,32 +24,32 @@ def ajoutClausesBreeze(gs, i, j):
     r = "-B{}{}".format(i, j)
     if(i-1 > 0):
         gs.push_pretty_clause(["B{}{} -P{}{}".format(i, j, i-1, j)])
-        r += "-P{}{}".format(i-1, j)
+        r += " -P{}{}".format(i-1, j)
     if(i+1 < N):
         gs.push_pretty_clause(["B{}{} -P{}{}".format(i, j, i+1, j)])
-        r += "-P{}{}".format(i+1, j)
+        r += " -P{}{}".format(i+1, j)
     if(j-1 > 0):
         gs.push_pretty_clause(["B{}{} -P{}{}".format(i, j, i, j-1)])
-        r += "-P{}{}".format(i, j-1)
+        r += " -P{}{}".format(i, j-1)
     if(j+1 < N):
         gs.push_pretty_clause(["B{}{} -P{}{}".format(i, j, i, j+1)])
-        r += "-P{}{}".format(i, j+1)
+        r += " -P{}{}".format(i, j+1)
     gs.push_pretty_clause([r])
     
 def ajoutClausesStench(gs, i, j):
     r = "-S{}{}".format(i, j)
     if(i-1 > 0):
         gs.push_pretty_clause(["S{}{} -W{}{}".format(i, j, i-1, j)])
-        r += "-W{}{}".format(i-1, j)
+        r += " -W{}{}".format(i-1, j)
     if(i+1 < N):
         gs.push_pretty_clause(["S{}{} -W{}{}".format(i, j, i+1, j)])
-        r += "-W{}{}".format(i+1, j)
+        r += " -W{}{}".format(i+1, j)
     if(j-1 > 0):
         gs.push_pretty_clause(["S{}{} -W{}{}".format(i, j, i, j-1)])
-        r += "-W{}{}".format(i, j-1)
+        r += " -W{}{}".format(i, j-1)
     if(j+1 < N):
         gs.push_pretty_clause(["S{}{} -W{}{}".format(i, j, i, j+1)])
-        r += "-W{}{}".format(i, j+1)
+        r += " -W{}{}".format(i, j+1)
     gs.push_pretty_clause([r])
 
 if __name__ == "__main__":
