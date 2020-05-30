@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Thu May 21 17:31:00 2020
+
+@author: theo
+"""
+
 from typing import Dict, Tuple, List, Union
 from lib.gopherpysat import Gophersat
 from wumpus import WumpusWorld
@@ -69,35 +77,75 @@ def isWumpus(gs,i,j):
     gs.pop_clause()
     return isWumpus
 
+def isStench(gs,i,j):
+    gs.push_pretty_clause(["-S{}_{}".format(i, j)])
+    isStench = not(gs.solve())
+    gs.pop_clause()
+    return isStench
+
+def isBreeze(gs,i,j):
+    gs.push_pretty_clause(["-B{}_{}".format(i, j)])
+    isBreeze = not(gs.solve())
+    gs.pop_clause()
+    return isBreeze
+
 def isPuit(gs,i,j):
     gs.push_pretty_clause(["-P{}_{}".format(i, j)])
     isPuit = not(gs.solve())
     gs.pop_clause()
     return isPuit
 
-def fullKnowledge():
-    knowledge = ww.get_knowledge()
+def isEmpty(gs,i,j):
+    gs.push_pretty_clause(["-E{}_{}".format(i, j)])
+    isEmpty = not(gs.solve())
+    gs.pop_clause()
+    return isEmpty
+
+def isSafe(gs, i, j):
+    gs.push_pretty_clause(["P{}_{}".format(i, j)])
+    resPuit = gs.solve()
+    gs.pop_clause()
+    gs.push_pretty_clause(["W{}_{}".format(i, j)])
+    resWumpus = gs.solve()
+    gs.pop_clause()
+    if((resPuit or resWumpus) == False):
+        return True
+    else :
+        return False
+
+def fullKnowledge(knowledge):
     parcours = True
-    for i in range(ww.get_n()):
-        for j in range(ww.get_n()):
-            if (knowledge[i][j]=="?"):
+    for i in range(len(knowledge)):
+        for j in range(len(knowledge)):
+            if (knowledge[i][j]==''):
                 parcours = False
     return parcours
 
-def globalProbe():
-    knowledge = ww.get_knowledge()
+def globalProbe(knowledge):
     knowledgeOld = []
     while(knowledge != knowledgeOld):
         knowledgeOld = knowledge
-        for a in range(ww.get_n()):
-            for b in range(ww.get_n()):
-                if knowledge[a][b]=='?': #on ne connait pas la case
+        for a in range(len(knowledge)):
+            for b in range(len(knowledge)):
+                if (knowledge[a][b]==''): #on ne connait pas la case
+                    if(isWumpus(gs, a, b)):
+                        gs.push_pretty_clause(["W{}_{}".format(a, b)])
+                    if(isStench(gs, a, b)):
+                        gs.push_pretty_clause(["S{}_{}".format(a, b)])
+                    if(isBreeze(gs, a, b)):
+                        gs.push_pretty_clause(["B{}_{}".format(a, b)])
+                    if(isPuit(gs, a, b)):
+                        gs.push_pretty_clause(["P{}_{}".format(a, b)])
+                    if(isEmpty(gs, a, b)):
+                        gs.push_pretty_clause(["E{}_{}".format(a, b)])
                 
-                    if isWumpus(gs, a, b)==False and isPuit(gs, a, b)==False:
+                    if(isSafe(gs, a, b)):
                         
                         print("la case (",a,",",b,") est safe! j'utilise un probe")
                         probe1=ww.probe(a, b)
-                        knowledge=ww.get_knowledge()
+                        if(probe1[1] == 'p'):
+                            print("ALEEEEEEEEEEERTE")
+                        knowledge[a][b] = probe1[1]
                         print(knowledge)
                         if ('.' in probe1[1]): #la case est empty
                             gs.push_pretty_clause(["E{}_{}".format(a, b)])
@@ -110,15 +158,15 @@ def globalProbe():
                         
                         if ('G' in probe1[1]): #la case est stenchy
                             gs.push_pretty_clause(["G{}_{}".format(a, b)])
+    return knowledge
         
 
-def cautious():
-    knowledge=ww.get_knowledge()        
-    for a in range(ww.get_n()):
-        for b in range(ww.get_n()):
-            if knowledge[a][b]=='?':
+def cautious(knowledge):       
+    for a in range(len(knowledge)):
+        for b in range(len(knowledge)):
+            if knowledge[a][b]=='':
                 probe1=ww.cautious_probe(a,b)
-                knowledge=ww.get_knowledge()
+                knowledge[a][b] = probe1[1]
                 print(knowledge)
                 if ('.' in probe1[1]): #la case est empty
                     gs.push_pretty_clause(["E{}_{}".format(a, b)])
@@ -129,15 +177,15 @@ def cautious():
                 if ('S' in probe1[1]): #la case est stenchy
                     gs.push_pretty_clause(["S{}_{}".format(a, b)])
                 
-                if ('G' in probe1[1]): #la case est stenchy
+                if ('G' in probe1[1]): #la case est gold
                     gs.push_pretty_clause(["G{}_{}".format(a, b)])
                     
-                if ('W' in probe1[1]): #la case est stenchy
+                if ('W' in probe1[1]): #la case est Wumpus
                     gs.push_pretty_clause(["W{}_{}".format(a, b)])
                 
-                if ('P' in probe1[1]): #la case est stenchy
+                if ('P' in probe1[1]): #la case est Puit
                     gs.push_pretty_clause(["P{}_{}".format(a, b)])
-                return
+                return knowledge
 
 
 # Les rêgles sont les mêmes partout donc à l'initialisation :
@@ -172,18 +220,21 @@ if __name__ == "__main__":
 #     print(gs.get_model())
 # =============================================================================
     # variables
-    ww = WumpusWorld(10, True)
+    ww = WumpusWorld()
     voc = creationVoc(ww.get_n())
     gs = Gophersat(gophersat_exec, voc)
     
     #état des lieux 1: on ne sait rien
     print(ww.get_knowledge())
+    knowledge = [[]] * ww.get_n()
     
     for i in range(ww.get_n()):
+        knowledge[i] = []
         for j in range(ww.get_n()):
             ajoutClauseEmpty(gs, i, j)
             ajoutClausesBreeze(gs, i, j)
             ajoutClausesStench(gs, i, j)
+            knowledge[i].append('')
             
     #on probe l'unique case safe
     probe1=ww.probe(0, 0)
@@ -200,11 +251,11 @@ if __name__ == "__main__":
         gs.push_pretty_clause(["G0_0"])
     
     #début du bordel
-    while fullKnowledge()==False:
-        globalProbe()
+    while fullKnowledge(knowledge)==False:
+        knowledge = globalProbe(knowledge)
         print("toutes les cases inconnues restantes sont unsafe, je n'ai pas le choix j'utilise un seul cautious probe pour me dépatouiller")
-        cautious()
+        knowledge = cautious(knowledge)
     print("toutes les cases ont été sondés! je connais à présent ma géographie!")
-    print(ww.get_knowledge())
+    print(knowledge)
     print(ww.get_cost())
 
