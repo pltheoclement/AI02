@@ -128,24 +128,28 @@ def globalProbe(knowledge):
         for a in range(len(knowledge)):
             for b in range(len(knowledge)):
                 if (knowledge[a][b]==''): #on ne connait pas la case
-                    if(isWumpus(gs, a, b)):
-                        gs.push_pretty_clause(["W{}_{}".format(a, b)])
-                    if(isStench(gs, a, b)):
-                        gs.push_pretty_clause(["S{}_{}".format(a, b)])
-                    if(isBreeze(gs, a, b)):
-                        gs.push_pretty_clause(["B{}_{}".format(a, b)])
-                    if(isPuit(gs, a, b)):
-                        gs.push_pretty_clause(["P{}_{}".format(a, b)])
-                    if(isEmpty(gs, a, b)):
-                        gs.push_pretty_clause(["E{}_{}".format(a, b)])
+                    if(isWumpus(gs, a, b) or isStench(gs, a, b) or isBreeze(gs, a, b) or isPuit(gs, a, b) or isEmpty(gs, a, b)):
+                        if(isWumpus(gs, a, b)):
+                            gs.push_pretty_clause(["W{}_{}".format(a, b)])
+                            knowledge[a][b] += "W"
+                        if(isStench(gs, a, b)):
+                            gs.push_pretty_clause(["S{}_{}".format(a, b)])
+                            knowledge[a][b] += "S"
+                        if(isBreeze(gs, a, b)):
+                            gs.push_pretty_clause(["B{}_{}".format(a, b)])
+                            knowledge[a][b] += "B"
+                        if(isPuit(gs, a, b)):
+                            gs.push_pretty_clause(["P{}_{}".format(a, b)])
+                            knowledge[a][b] += "P"
+                        if(isEmpty(gs, a, b)):
+                            gs.push_pretty_clause(["E{}_{}".format(a, b)])
+                            knowledge[a][b] = "."
                 
-                    if(isSafe(gs, a, b)):
+                    elif(isSafe(gs, a, b)):
                         
                         print("la case (",a,",",b,") est safe! j'utilise un probe")
                         probe1=ww.probe(a, b)
-                        if(probe1[1] == 'p'):
-                            print("ALEEEEEEEEEEERTE")
-                        knowledge[a][b] = probe1[1]
+                        knowledge[a][b] = probe1[1] 
                         print(knowledge)
                         if ('.' in probe1[1]): #la case est empty
                             gs.push_pretty_clause(["E{}_{}".format(a, b)])
@@ -159,12 +163,27 @@ def globalProbe(knowledge):
                         if ('G' in probe1[1]): #la case est stenchy
                             gs.push_pretty_clause(["G{}_{}".format(a, b)])
     return knowledge
-        
 
-def cautious(knowledge):       
+def verif(gs, knowledge):
+    for a in range (len(knowledge)):
+        for b in range (len(knowledge)):
+            if(isWumpus(gs, a, b) and not("W" in knowledge[a][b])):
+                knowledge[a][b] += "W"
+            if(isStench(gs, a, b) and not("S" in knowledge[a][b])):
+                knowledge[a][b] += "S"
+            if(isBreeze(gs, a, b) and not("B" in knowledge[a][b])):
+                knowledge[a][b] += "B"
+            if(isPuit(gs, a, b) and not("P" in knowledge[a][b])):
+                knowledge[a][b] += "P"
+            if(isEmpty(gs, a, b) and not("." in knowledge[a][b])):
+                knowledge[a][b] = "."
+    return knowledge
+
+def cautious(knowledge):     
     for a in range(len(knowledge)):
         for b in range(len(knowledge)):
             if knowledge[a][b]=='':
+                print("la case (",a,",",b,") est pas sure! j'utilise un cautious probe")
                 probe1=ww.cautious_probe(a,b)
                 knowledge[a][b] = probe1[1]
                 print(knowledge)
@@ -227,17 +246,17 @@ if __name__ == "__main__":
     #état des lieux 1: on ne sait rien
     print(ww.get_knowledge())
     knowledge = [[]] * ww.get_n()
-    
     for i in range(ww.get_n()):
-        knowledge[i] = []
+        knowledge[i] = [''] * ww.get_n()
         for j in range(ww.get_n()):
             ajoutClauseEmpty(gs, i, j)
             ajoutClausesBreeze(gs, i, j)
             ajoutClausesStench(gs, i, j)
-            knowledge[i].append('')
+            
             
     #on probe l'unique case safe
     probe1=ww.probe(0, 0)
+    knowledge[0][0] = probe1[1]
     if ('.' in probe1[1]): #la case est empty
         gs.push_pretty_clause(["E0_0"])
         
@@ -255,6 +274,7 @@ if __name__ == "__main__":
         knowledge = globalProbe(knowledge)
         print("toutes les cases inconnues restantes sont unsafe, je n'ai pas le choix j'utilise un seul cautious probe pour me dépatouiller")
         knowledge = cautious(knowledge)
+    knowledge = verif(gs, knowledge)
     print("toutes les cases ont été sondés! je connais à présent ma géographie!")
     print(knowledge)
     print(ww.get_cost())
