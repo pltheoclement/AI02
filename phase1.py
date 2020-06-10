@@ -147,10 +147,12 @@ def globalProbe(knowledge):
             for b in range(N):
                 if (knowledge[a][b]==''): #on ne connait pas la case
                     if(isWumpus(gs, a, b)):
+                        print("j'arrive à deviner")
                         gs.push_pretty_clause(["W{}_{}".format(a, b)])
                         knowledge[a][b] += "W"
                         changement = True
                     elif(isPuit(gs, a, b)):
+                        print("j'arrive à deviner")
                         gs.push_pretty_clause(["P{}_{}".format(a, b)])
                         knowledge[a][b] += "P"
                         changement = True
@@ -192,10 +194,8 @@ def cautious(knowledge):
                     gs.push_pretty_clause(["P{}_{}".format(a, b)])
                 return knowledge
 
-
-if __name__ == "__main__":
-    # variables
-    ww = WumpusWorld()
+def initialisation(N, random = False):
+    ww = WumpusWorld(N, random)
     voc = creationVoc(ww.get_n())
     gs = Gophersat(gophersat_exec, voc)
     
@@ -222,7 +222,9 @@ if __name__ == "__main__":
 
     if ('S' in probe1[1]): #la case est stenchy
         gs.push_pretty_clause(["S0_0"])
-        
+    return(ww, gs, knowledge)
+
+def cartographie(ww, gs, knowledge):
     #début du bordel
     print(knowledge)
     while fullKnowledge(knowledge)==False:
@@ -231,4 +233,9 @@ if __name__ == "__main__":
     print("toutes les cases ont été sondés! je connais à présent ma géographie!")
     print(knowledge)
     print(ww.get_cost())
+
+
+if __name__ == "__main__":
+    (ww, gs, knowledge) = initialisation(N, True)
+    cartographie(ww, gs, knowledge) 
 
