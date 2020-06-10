@@ -10,7 +10,7 @@ from typing import List
 from lib.gopherpysat import Gophersat
 from wumpus import WumpusWorld
 
-N = 4 # Taille de la grille 
+N = 10 # Taille de la grille 
 
 ## Ligne à remplacer avec VOTRE emplacement et nom de l'exécutable gophersat :
 ## Attention ! Sous Windows, il faut remplacer les '\' par des '/' dans le chemin
@@ -18,7 +18,7 @@ N = 4 # Taille de la grille
 gophersat_exec = "/home/theo/go/bin/gophersat"
 
 
-def creationVoc(n) -> List[str] : #Création des variables pour les 5 éléments du monde (W, S, G, P, B) pour un monde de taille n*n
+def creationVoc(n) -> List[str] : #Création des variables pour les 5 éléments du monde (W, S, P, B) pour un monde de taille n*n
     voc = []
     for i in range(n):
         for j in range(n):
@@ -147,16 +147,14 @@ def globalProbe(knowledge):
             for b in range(N):
                 if (knowledge[a][b]==''): #on ne connait pas la case
                     if(isWumpus(gs, a, b)):
-                        print("j'arrive à deviner")
                         gs.push_pretty_clause(["W{}_{}".format(a, b)])
                         knowledge[a][b] += "W"
                         changement = True
                     elif(isPuit(gs, a, b)):
-                        print("j'arrive à deviner")
                         gs.push_pretty_clause(["P{}_{}".format(a, b)])
                         knowledge[a][b] += "P"
                         changement = True
-            
+                        
                     elif(isSafe(gs, a, b)):
                         changement = True
                         probe1=ww.probe(a, b)
@@ -230,12 +228,23 @@ def cartographie(ww, gs, knowledge):
     while fullKnowledge(knowledge)==False:
         knowledge = globalProbe(knowledge)
         knowledge = cautious(knowledge)
+    return(ww, gs, knowledge)
+
+# def rechercheGold(ww, gs, knowledge):
+#     for a in range(N):
+#         for b in range(N):
+#             if "-" in knowledge[a][b]:
+#                 probe1=ww.probe(a, b)
+#                 knowledge[a][b] = probe1[1] 
+#     return(ww, gs, knowledge)
+if __name__ == "__main__":
+    (ww, gs, knowledge) = initialisation(N, True)
+    (ww, gs, knowledge) = cartographie(ww, gs, knowledge)
+    print("toutes les cases ont été sondés! je connais à présent ma géographie!")
+    print(knowledge)
+    print(ww)
+    print(ww.get_cost())
+    #(ww, gs, knowledge) = rechercheGold(ww, gs, knowledge)
     print("toutes les cases ont été sondés! je connais à présent ma géographie!")
     print(knowledge)
     print(ww.get_cost())
-
-
-if __name__ == "__main__":
-    (ww, gs, knowledge) = initialisation(N, True)
-    cartographie(ww, gs, knowledge) 
-
