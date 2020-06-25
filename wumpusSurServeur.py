@@ -20,6 +20,20 @@ __status__ = "dev"
 gophersat_exec = "/home/theo/go/bin/gophersat"
 
 
+class Case():
+    """A case class for A* Pathfinding"""
+
+    def __init__(self, parent=None, position=None):
+        self.parent = parent
+        self.position = position
+
+        self.g = 0
+        self.h = 0
+        self.f = 0
+
+    def __eq__(self, other):
+        return self.position == other.position
+
 def creationVoc(n): #Création des variables pour les 5 éléments du monde (W, S, P, B) pour un monde de taille n*n
     voc = []
     for i in range(n):
@@ -265,6 +279,88 @@ def rechercheGold(size, ww, gs, knowledge):
                 knowledge[a][b] = probe1[1]
     return(ww, gs, knowledge)
 
+
+def astar(maze, start, end):
+
+    # Create Case and end case
+    start_case = Case(None, start)
+    start_case.g = start_case.h = start_case.f = 0
+    end_case = Case(None, end)
+    end_case.g = end_case.h = end_case.f = 0
+
+    # Initialize both open and closed list
+    open_list = []
+    closed_list = []
+
+    # Add the start case
+    open_list.append(start_case)
+
+    # Loop until you find the end
+    while len(open_list) > 0:
+
+        # Get the current case
+        current_case = open_list[0]
+        current_index = 0
+        for index, item in enumerate(open_list):
+            if item.f < current_case.f:
+                current_case = item
+                current_index = index
+
+        # Pop current off open list, add to closed list
+        open_list.pop(current_index)
+        closed_list.append(current_case)
+
+        # Found the goal
+        if current_case == end_case:
+            path = []
+            current = current_case
+            while current is not None:
+                path.append(current.position)
+                current = current.parent
+            return path[::-1] # Return reversed path
+
+        # Generate children
+        children = []
+        for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]: # Adjacent squares
+
+            # Get case position
+            case_position = (current_case.position[0] + new_position[0], current_case.position[1] + new_position[1])
+
+            # Make sure within range
+            if case_position[0] > (len(maze) - 1) or case_position[0] < 0 or case_position[1] > (len(maze[len(maze)-1]) -1) or case_position[1] < 0:
+                continue
+
+            # Make sure walkable terrain
+            if maze[case_position[0]][case_position[1]] != 0:
+                continue
+
+            # Create new case
+            new_case = Case(current_case, case_position)
+
+            # Append
+            children.append(new_case)
+
+        # Loop through children
+        for child in children:
+
+            # Child is on the closed list
+            for closed_child in closed_list:
+                if child == closed_child:
+                    continue
+
+            # Create the f, g, and h values
+            child.g = current_case.g + 1
+            child.h = ((child.position[0] - end_case.position[0]) ** 2) + ((child.position[1] - end_case.position[1]) ** 2)
+            child.f = child.g + child.h
+
+            # Child is already in the open list
+            for open_case in open_list:
+                if child == open_case and child.g > open_case.g:
+                    continue
+
+            # Add the child to the open list
+            open_list.append(child)
+
 def sucesseurs(size, knowledge, x, y):
     sucesseurs = []
     if(x-1 >= 0):
@@ -281,20 +377,13 @@ def sucesseurs(size, knowledge, x, y):
             sucesseurs.append((x, y+1))
     return sucesseurs
 
-def profondeur(knowledge, suc):
+def largeur(size, knowledge, suc):
     e = 0
     while e < len(suc):
-        for b in sucesseurs(knowledge, suc[e][0], suc[e][1]):
+        for b in sucesseurs(size, knowledge, suc[e][0], suc[e][1]):
             if not(b in suc):
                 suc.append(b)
         e+=1
-
-def heuristique(size, a, b):
-    heuri = [[0] * size for i in range(size)]
-    for x in range(size):
-        for y in range(size):
-            heuri[x][y] = abs(a-x)+abs(b-y)
-    return heuri
 
 def cestpartit():
         
@@ -312,39 +401,76 @@ def cestpartit():
     
     status, msg, size = wwr.next_maze()
     
-    ###################
-    ##### PHASE 1 #####
-    ###################
+    nbMaze = 0
     
-    (gs, knowledge) = initialisation(size, wwr)
-    cartographie(size, wwr, gs, knowledge)
-    phase, pos = wwr.get_status()
-    print("status:", phase, pos)
-
-    # La carte doit être entièrement parcourue avant de passer à la phase 2!
-    status, msg = wwr.end_map()
-    print(status, msg)
-
-    phase, pos = wwr.get_status()
-    print("status:", phase, pos)
+    while status == "[OK]":
     
-    i, j = wwr.get_position()
-    print(f"Vous êtes en ({i},{j})")
+        ###################
+        ##### PHASE 1 #####
+        ###################
+        
+        (gs, knowledge) = initialisation(size, wwr)
+        cartographie(size, wwr, gs, knowledge)
+        phase, pos = wwr.get_status()
     
-    print(wwr.get_gold_infos())
-    ###################
-    ##### PHASE 2 #####
-    ###################
+        # La carte doit être entièrement parcourue avant de passer à la phase 2!
+        status, msg = wwr.end_map()
+        #print(status, msg)
     
-    goldATrouver = []
-    for a in range(size):
-        for b in range(size):
-            if('G' in knowledge[a][b] and not('P' in knowledge[a][b]) and not('W' in knowledge[a][b])):
-                goldATrouver.append((a, b))
-            
-    heuris = heuristique(size, 1, 2)
-    return (goldATrouver, knowledge)
+        phase, pos = wwr.get_status()
+        
+        i, j = wwr.get_position()
+        ###################
+        ##### PHASE 2 #####
+        ###################
+        
+        suc = [(0, 0)]
+        largeur(size, knowledge, suc)
+        
+        terrain = [[1] * size for i in range(size)]
+        for a, b in suc:
+            terrain[a][b] = 0
+        
+        goldATrouver = []
+        for a in range(size):
+            for b in range(size):
+                if('G' in knowledge[a][b] and ((a, b) in suc)):
+                    goldATrouver.append((a, b))
+        #goldATrouver.append((0, 0))       
+        
+        cheminTotal = []
+        pos = wwr.get_position()
+        
+        for a, b in goldATrouver:
+            #print("({}, {})".format(a, b))
+            chemin = astar(terrain, pos, (a,b))
+            pos = (a, b)
+            for case in chemin[1:]:
+                cheminTotal.append(case)
+                if (case in goldATrouver):
+                    goldATrouver.remove(case)
+        
+        chemin = astar(terrain, pos, (0,0))
+        for case in chemin[1:]:
+            cheminTotal.append(case)
+        
+        #print(cheminTotal)
+        for i, j in cheminTotal:
+            res = wwr.go_to(i, j)
+            #print(res)
+        res = wwr.maze_completed()
+        #print(res)
+    
+        phase, pos = wwr.get_status()
+        
+        nbMaze += 1
+        print("{} Wumpus terminés".format(nbMaze))
+        #input()
+        
+        
+        status, msg, size = wwr.next_maze()
+    
 
 if __name__ == "__main__":
 
-    g, knowledge = cestpartit()
+    cestpartit()
